@@ -1,7 +1,3 @@
-# NOTE: Previous versions of pytorch and torchvision might also work as well,
-# but we haven't test them yet
-torch>=1.7.1
-torchvision>=0.8.2
-matplotlib
-numpy
-tensorboard
+#Dataset preparation:
+Cifar10, Cifar100, Mnist, SVHN datasets can be automatically downloaded with torchvision.datasets; Tiny-Imagenet requires manual downloading.
+#Experiments
