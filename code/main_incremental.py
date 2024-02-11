@@ -152,7 +152,6 @@ def main(argv=None):
     parser.add_argument('--training_mode', default='ot', type=str,
                         help='whether to use traditional averaging or fusion-based averaging, \
                             can be traditional or fusion or fusion_slice or ot (default: traditional)')
-    # #任务
    ###################### myargs #####################
     parser.add_argument('-negative_sample', '--negative_sample', type=float, default=1.0, help='')
     parser.add_argument('-redcircle_dis_thresh', '--redcircle_dis_thresh', type=float, default=10.0, help='')
