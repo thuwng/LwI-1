@@ -14,7 +14,6 @@ __all__ = ['resnet32']
 import math
 from src.networks.network import LLL_Net
 
-# 构建 ResNet 的基本块
 class BasicBlock(nn.Module):
     def __init__(self, in_planes, planes, stride=1):
         super(BasicBlock, self).__init__()
@@ -43,7 +42,7 @@ class BasicBlock(nn.Module):
         out = self.relu(out)
         return out
 
-# 构建 ResNet 主体结构
+
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=100):
         super(ResNet, self).__init__()
@@ -84,7 +83,6 @@ class ResNet(nn.Module):
         out = self.fc(out)
         return out
 
-# 定义 ResNet-18 结构
 def resnet32(num_classes=100):
     return ResNet(BasicBlock, [2, 2, 2, 2],num_classes=100)
 
