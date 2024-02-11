@@ -229,7 +229,6 @@ def get_wassersteinized_layers_modularized_tests(args, device, networks, activat
             # mu = _get_neuron_importance_histogram(args, aligned_wt, is_conv)
             mu = _get_neuron_importance_histogram(args, fc_layer0_weight_data, is_conv)
             nu = _get_neuron_importance_histogram(args, fc_layer1_weight_data, is_conv)
-            # Alexanderia
 
         cpuM = M.data.cpu().numpy()
 
@@ -672,7 +671,6 @@ def get_wassersteinized_layers_modularized_features(args, device, networks, fish
         # print('layer0_name',layer0_name)
         # print('layer1_name',layer1_name)
         assert fc_layer0_weight.shape == fc_layer1_weight.shape
-        # Alexanderia
         # print("Previous layer shape is ", previous_layer_shape)
         previous_layer_shape = fc_layer1_weight.shape
 
@@ -750,7 +748,6 @@ def get_wassersteinized_layers_modularized_features(args, device, networks, fish
                 
                 M1 = ground_metric_object.process(aligned_wt, fc_layer1_weight)
             if args.skip_last_layer and idx == (num_layers - 1):
-                # Alexanderia
                 # print("Simple averaging of last layer weights. NO transport map needs to be computed")
                 # if args.ensemble_step != 0.5:
                 avg_aligned_layers.append((1 - args.ensemble_step) * aligned_wt +
@@ -770,7 +767,6 @@ def get_wassersteinized_layers_modularized_features(args, device, networks, fish
             # mu = _get_neuron_importance_histogram(args, aligned_wt, is_conv)
             mu = _get_neuron_importance_histogram(args, fc_layer0_weight_data, is_conv)
             nu = _get_neuron_importance_histogram(args, fc_layer1_weight_data, is_conv)
-            # Alexanderia
 
         # cpuM =( args.we*M+(1-args.we)*M1).data.cpu().numpy()
         cpuM = M.data.cpu().numpy()
@@ -959,7 +955,6 @@ def get_wassersteinized_layers_modularized1(args, device, networks, activations=
                     aligned_wt = torch.matmul(fc_layer0_weight.data, T_var)
                 M = ground_metric_object.process(aligned_wt, fc_layer1_weight)
             if args.skip_last_layer and idx == (num_layers - 1):
-                # Alexanderia
                 # print("Simple averaging of last layer weights. NO transport map needs to be computed")
                 if ensemble_step != 0.5:
                     avg_aligned_layers.append((1 - ensemble_step) * aligned_wt +
@@ -975,7 +970,6 @@ def get_wassersteinized_layers_modularized1(args, device, networks, activations=
             # mu = _get_neuron_importance_histogram(args, aligned_wt, is_conv)
             mu = _get_neuron_importance_histogram(args, fc_layer0_weight_data, is_conv)
             nu = _get_neuron_importance_histogram(args, fc_layer1_weight_data, is_conv)
-            # Alexanderia
 
         cpuM = M.data.cpu().numpy()
         if idx>=(num_layers - args.layers):
@@ -1113,7 +1107,6 @@ def get_wassersteinized_layers_modularized_ewc(args, device, networks, fishers,a
         # print('layer0_name',layer0_name)
         # print('layer1_name',layer1_name)
         assert fc_layer0_weight.shape == fc_layer1_weight.shape
-        # Alexanderia
         # print("Previous layer shape is ", previous_layer_shape)
         previous_layer_shape = fc_layer1_weight.shape
 
@@ -1191,7 +1184,6 @@ def get_wassersteinized_layers_modularized_ewc(args, device, networks, fishers,a
                 
                 M1 = ground_metric_object.process(aligned_wt, fc_layer1_weight)
             if args.skip_last_layer and idx == (num_layers - 1):
-                # Alexanderia
                 # print("Simple averaging of last layer weights. NO transport map needs to be computed")
                 # if args.ensemble_step != 0.5:
                 avg_aligned_layers.append((1 - args.ensemble_step) * aligned_wt +
@@ -1211,7 +1203,6 @@ def get_wassersteinized_layers_modularized_ewc(args, device, networks, fishers,a
             # mu = _get_neuron_importance_histogram(args, aligned_wt, is_conv)
             mu = _get_neuron_importance_histogram(args, fc_layer0_weight_data, is_conv)
             nu = _get_neuron_importance_histogram(args, fc_layer1_weight_data, is_conv)
-            # Alexanderia
 
         # cpuM =( args.we*M+(1-args.we)*M1).data.cpu().numpy()
         cpuM = M.data.cpu().numpy()
@@ -1422,7 +1413,6 @@ def ot_weight_align(w: torch.tensor, anchor: torch.tensor, T_var_pre: torch.tens
 #     layer_idx = 0
 #     model_state_dict = model.state_dict()
 #
-#     # Alexanderia
 #     # print("len of model_state_dict is ", len(model_state_dict.items()))
 #     print("len of new_params is ", len(new_params))
 #
@@ -2004,7 +1994,6 @@ def get_acts_wassersteinized_layers_modularized(args, networks, activations, eps
 
 #
 # def get_network_from_param_list(args, param_list, test_loader):
-#     # Alexanderia
 #     # print("using independent method")
 #     new_network = get_model_from_name(args, idx=1)
 #     if args.gpu_id != -1:
@@ -2013,12 +2002,10 @@ def get_acts_wassersteinized_layers_modularized(args, networks, activations, eps
 #     # check the test performance of the network before
 #     log_dict = {}
 #     log_dict['test_losses'] = []
-#     # Alexanderia
 #     # routines.test(args, new_network, test_loader, log_dict)
 #
 #     # set the weights of the new network
 #     # print("before", new_network.state_dict())
-#     # Alexanderia
 #     # print("len of model parameters and avg aligned layers is ", len(list(new_network.parameters())),
 #     #   len(param_list))
 #     assert len(list(new_network.parameters())) == len(param_list)
@@ -2026,9 +2013,7 @@ def get_acts_wassersteinized_layers_modularized(args, networks, activations, eps
 #     layer_idx = 0
 #     model_state_dict = new_network.state_dict()
 #
-#     # Alexanderia
 #     # print("len of model_state_dict is ", len(model_state_dict.items()))
-#     # Alexanderia
 #     # print("len of param_list is ", len(param_list))
 #
 #     for key, value in model_state_dict.items():
