@@ -777,7 +777,6 @@ def get_wassersteinized_layers_modularized_features(args, device, networks, fish
         print(cpuM.shape)
         if idx>=(num_layers - 1):
             cpuM = -cpuM
-            # print('执行')
             ensemble_step = args.ensemble_step_diff
         else:
             cpuM = cpuM
@@ -1219,7 +1218,6 @@ def get_wassersteinized_layers_modularized_ewc(args, device, networks, fishers,a
 
         # if idx>=(num_layers - 1):
         #     cpuM = -cpuM
-        #     # print('执行')
         #     ensemble_step = args.ensemble_step_diff
         # else:
         cpuM = cpuM
