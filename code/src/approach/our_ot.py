@@ -14,22 +14,21 @@ from copy import deepcopy
 def compute_optimal_transport(M, r, c, lam, eplison=1e-8):
     n, m = M.shape  # 8, 5
     P = np.exp(lam * M)  # (8, 5)
-    P /= P.sum()  # 归一化
+    P /= P.sum() 
     # print('P', P)
     u = np.zeros(n)  # (8, )
     # normalize this matrix
-    while np.max(np.abs(u - P.sum(1))) > eplison:  # 这里是用行和判断收敛
-        # 对行和列进行缩放，使用到了numpy的广播机制，不了解广播机制的同学可以去百度一下
-        u = P.sum(1)  # 行和 (8, )
+    while np.max(np.abs(u - P.sum(1))) > eplison: 
+        u = P.sum(1) 
         # print('u',u)
-        P *= (r / u).reshape((-1, 1))  # 缩放行元素，使行和逼近r
+        P *= (r / u).reshape((-1, 1)) 
         # print('pu', P)
-        v = P.sum(0)  # 列和 (5, )
+        v = P.sum(0) 
         # print('v',v)
-        P *= (c / v).reshape((1, -1))  # 缩放列元素，使列和逼近c
+        P *= (c / v).reshape((1, -1)) 
         # print('pv', P)
 
-    return P, np.sum(P * M)  # 返回分配矩阵和Sinkhorn距离
+    return P, np.sum(P * M)
 
 
 def sinkhorn_torch(M, a, b, lambda_sh, numItermax=5000, stopThr=.5e-2, cuda=False):
@@ -216,8 +215,6 @@ def get_wassersteinized_layers_modularized_tests(args, device, networks, activat
                     aligned_wt = torch.matmul(fc_layer0_weight.data, T_var)
                 M = ground_metric_object.process(aligned_wt, fc_layer1_weight)
             if args.skip_last_layer and idx == (num_layers - 1):
-                # Alexanderia
-                # print("Simple averaging of last layer weights. NO transport map needs to be computed")
                 if args.ensemble_step != 0.5:
                     avg_aligned_layers.append((1 - args.ensemble_step) * aligned_wt +
                                               args.ensemble_step * fc_layer1_weight)
@@ -845,10 +842,6 @@ def get_wassersteinized_layers_modularized_features(args, device, networks, fish
                 T_var = T_var * marginals
                 T_var = T1_var * marginals1
 
-        print('T',T_var[0])
-        print('+'*108)
-        print('T1',T1_var[0])
-
         if args.debug:
             if idx == (num_layers - 1):
                 print("there goes the last transport map: \n ", T_var)
@@ -1248,9 +1241,6 @@ def get_wassersteinized_layers_modularized_ewc(args, device, networks, fishers,a
         '''
         [T_var] is updated by [T]
         '''
-        # print('TT',TT)
-        # print('TT1',TT1)
-        # print('='*108)
         
         if args.gpu_id != -1:
             T_var = torch.from_numpy(T).to(device).float()
