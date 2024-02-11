@@ -60,7 +60,7 @@ class Inc_Learning_Appr:
             # Loop epochs -- train warm-up head
             for e in range(self.warmup_epochs):
                 warmupclock0 = time.time()
-                self.model.heads[-1].train()   #训练
+                self.model.heads[-1].train()   
                 for images, targets in trn_loader:
                     outputs = self.model(images.to(self.device))
                     loss = self.warmup_loss(outputs[t], targets.to(self.device) - self.model.task_offset[t])
