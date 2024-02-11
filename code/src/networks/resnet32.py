@@ -1,4 +1,4 @@
-# # Authorized by Haeyong Kang.
+
 
 import torch
 import torch.nn as nn
