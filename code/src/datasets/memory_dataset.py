@@ -49,7 +49,7 @@ def get_data(trn_data, tst_data, num_tasks, nc_first_task, validation, shuffle_c
             cpertask[i + 1] += 1
 
     assert num_classes == cpertask.sum(), "something went wrong, the split does not match num classes"
-    cpertask_cumsum = np.cumsum(cpertask)    #按行进行叠加   class per task
+    cpertask_cumsum = np.cumsum(cpertask)
     init_class = np.concatenate(([0], cpertask_cumsum[:-1]))
 
     # initialize data structure
@@ -61,7 +61,7 @@ def get_data(trn_data, tst_data, num_tasks, nc_first_task, validation, shuffle_c
         data[tt]['tst'] = {'x': [], 'y': []}
 
     # ALL OR TRAIN
-    filtering = np.isin(trn_data['y'], class_order)   #判断是否在集合中
+    filtering = np.isin(trn_data['y'], class_order) 
     if filtering.sum() != len(trn_data['y']):
         trn_data['x'] = trn_data['x'][filtering]
         trn_data['y'] = np.array(trn_data['y'])[filtering]
@@ -95,8 +95,8 @@ def get_data(trn_data, tst_data, num_tasks, nc_first_task, validation, shuffle_c
     if validation > 0.0:
         for tt in data.keys():
             for cc in range(data[tt]['ncla']):
-                cls_idx = list(np.where(np.asarray(data[tt]['trn']['y']) == cc)[0])   #np.where(condition,x,y) : 满足条件（condition）输出x, 不满足则输出y
-                rnd_img = random.sample(cls_idx, int(np.round(len(cls_idx) * validation)))   #np.round 进行四舍五入
+                cls_idx = list(np.where(np.asarray(data[tt]['trn']['y']) == cc)[0])   
+                rnd_img = random.sample(cls_idx, int(np.round(len(cls_idx) * validation)))  
                 rnd_img.sort(reverse=True)
                 for ii in range(len(rnd_img)):
                     data[tt]['val']['x'].append(data[tt]['trn']['x'][rnd_img[ii]])
