@@ -10,7 +10,6 @@ from src.networks.network import LLL_Net
 
 
 class Inc_Learning_Appr:
-    """Basic class for implementing incremental learning approaches"""
 
     def __init__(self, model, device, nepochs=1, lr=0.05, lr_min=1e-4, lr_factor=3, lr_patience=5, clipgrad=10000,
                  momentum=0, wd=0, multi_softmax=False, wu_nepochs=0, wu_lr_factor=1, fix_bn=False,
@@ -39,32 +38,23 @@ class Inc_Learning_Appr:
 
     @staticmethod
     def extra_parser(args):
-        """Returns a parser containing the approach specific parameters"""
         parser = ArgumentParser()
         return parser.parse_known_args(args)
 
     @staticmethod
     def exemplars_dataset_class():
-        """Returns a exemplar dataset to use during the training if the approach needs it
-        :return: ExemplarDataset class or None
-        """
         return None
 
     def _get_optimizer(self):
-        """Returns the optimizer"""
-        # return torch.optim.Adam(self.model.parameters(), lr=self.lr)
         return torch.optim.SGD(self.model.parameters(), lr=self.lr, weight_decay=self.wd, momentum=self.momentum)
 
     def train(self, t, trn_loader, val_loader, consolidated_masks, curr_task_masks=None):
-        """Main train structure"""
         self.pre_train_process(t, trn_loader)
         self.train_loop(t, trn_loader, val_loader, consolidated_masks, curr_task_masks)
         self.post_train_process(t, trn_loader)
 
     def pre_train_process(self, t, trn_loader):
-        """Runs before training all epochs of the task (before the train session)"""
 
-        # Warm-up phase
         if self.warmup_epochs and t > 0:
             self.optimizer = torch.optim.SGD(self.model.heads[-1].parameters(), lr=self.warmup_lr)
             # Loop epochs -- train warm-up head
@@ -178,16 +168,13 @@ class Inc_Learning_Appr:
         self.model.load_state_dict(deepcopy(best_model))
 
     def post_train_process(self, t, trn_loader):
-        """Runs after training all the epochs of the task (after the train session)"""
         pass
 
     def train_epoch(self, t, trn_loader,consolidated_masks):
-        """Runs a single epoch"""
         self.model.train()
         if self.fix_bn and t > 0:
             self.model.freeze_bn()
         for images, targets in trn_loader:
-            # Forward current model
             outputs = self.model(images.to(self.device), t, mask=None, mode="train") 
             loss = self.criterion(t, outputs, targets.to(self.device))
             # Backward
@@ -278,8 +265,6 @@ class Inc_Learning_Appr:
         return total_loss / total_num, total_acc_taw / total_num, total_acc_tag / total_num
 
     def calculate_metrics(self, outputs, targets):
-        """Contains the main Task-Aware and Task-Agnostic metrics"""
-        """任务可知 和 任务不可知"""
         pred = torch.zeros_like(targets.to(self.device))
         # Task-Aware Multi-Head
         for m in range(len(pred)):
