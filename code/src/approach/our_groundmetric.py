@@ -129,8 +129,6 @@ class GroundMetric:
         return get_metric_map[self.ground_metric_type](coordinates, other_coordinates)
 
     def process(self, coordinates, other_coordinates=None):
-        # Alexanderia
-        # print('Processing the coordinates to form ground_metric')
         if self.params.geom_ensemble_type == 'wts' and self.params.normalize_wts:
             coordinates = self._normed_vecs(coordinates)
             if other_coordinates is not None:
