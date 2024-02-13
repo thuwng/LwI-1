@@ -254,7 +254,7 @@ class Inc_Learning_Appr:
 
                 # per_task_masks[t] = self.model.get_masks(t)
 
-                outputs = self.model(images.to(self.device), t, mask=curr_task_masks, mode=mode)   #output为一个list list中的shape为[64,2]
+                outputs = self.model(images.to(self.device), t, mask=curr_task_masks, mode=mode) 
                 loss = self.criterion(t, outputs, targets.to(self.device))
                 hits_taw, hits_tag = self.calculate_metrics(outputs, targets)
                 # Log
