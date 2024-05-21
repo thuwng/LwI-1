@@ -105,7 +105,7 @@ def main(argv=None):
                         help='Disable removing classifier last layer (default=%(default)s)')
     parser.add_argument('--pretrained', action='store_true',
                         help='Use pretrained backbone (default=%(default)s)')
-    # training args`W
+    # training argsW
     parser.add_argument('--approach', default='ours', type=str, choices=src.approach.__all__,
                         help='Learning approach used (default=%(default)s)', metavar="APPROACH")
     parser.add_argument('--nepochs', default=200, type=int, required=False,
