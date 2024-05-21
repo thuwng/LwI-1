@@ -7,7 +7,7 @@ from collections import OrderedDict
 from torch.nn.functional import relu, avg_pool2d
 
 from .subnet import SubnetConv2d, SubnetLinear
-
+  
 #######################################################################################
 #      GPM ResNet18
 #######################################################################################
