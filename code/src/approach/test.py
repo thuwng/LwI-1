@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from src.datasets.exemplars_dataset import ExemplarsDataset
 from src.approach.incremental_learning import Inc_Learning_Appr
 
-
+  
 class Appr(Inc_Learning_Appr):
     def __init__(self, model, device, nepochs=100, lr=0.05, lr_min=1e-4, lr_factor=3, lr_patience=5, clipgrad=10000,
                  momentum=0, wd=0, multi_softmax=False, wu_nepochs=0, wu_lr_factor=1, fix_bn=False, eval_on_train=False,
