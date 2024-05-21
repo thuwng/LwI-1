@@ -7,7 +7,7 @@ from src.networks.lenet import LeNetArch
 import torch
 import itertools
 from argparse import ArgumentParser
-import src.approach.our_ot as ot
+import src.approach.our_ot as ot  
 from src.datasets.exemplars_dataset import ExemplarsDataset
 from src.approach.incremental_learning import Inc_Learning_Appr
 from src.networks.network import LLL_Net
