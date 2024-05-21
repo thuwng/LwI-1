@@ -14,7 +14,7 @@ To run on Tiny-Imagenet, ResNet32, excute:
 
     python main_incremental.py --dataset imagenet_256 --network 'resnet32' --nepochs 200 --learning_rate 1e-3 --ensemble_step 0.71 --ensemble_step_diff 0.94 --reg 0.01 --momentum 0.0
 
-To run on Tiny-Imagenet, ResNet18, excute:
+To run on Tiny-Imagenet, ResNet18, excute:  
 
     python main_incremental.py --dataset imagenet_256 --network 'resnet18' --nepochs 200 --learning_rate 1e-3 --ensemble_step 0.85 --ensemble_step_diff 0.65 --reg 0.01 --momentum 0.0
 
