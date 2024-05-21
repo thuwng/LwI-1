@@ -7,7 +7,7 @@ from collections import OrderedDict
 import math
 
 import numpy as np
-
+  
 def percentile(scores, sparsity):
     k = 1 + round(.01 * float(sparsity) * (scores.numel() - 1))
     return scores.view(-1).kthvalue(k).values.item()
