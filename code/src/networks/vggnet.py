@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch    
 import os
 
-
+  
 class VGG(nn.Module):
 
   def __init__(self, classes=100):
