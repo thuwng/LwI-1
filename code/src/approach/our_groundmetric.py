@@ -3,7 +3,7 @@ import torch
 def isnan(x):
     return x != x
 
-class GroundMetric:
+class GroundMetric:  
 
     def __init__(self, params, not_squared = False):
         self.params = params
