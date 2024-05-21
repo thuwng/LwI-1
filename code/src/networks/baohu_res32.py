@@ -7,7 +7,7 @@ from collections import OrderedDict
 from torch.nn.functional import relu, avg_pool2d
 import torch
 import os
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  
 
 __all__ = ['resnet32']
 import math
