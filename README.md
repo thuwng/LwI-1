@@ -1,7 +1,7 @@
 # Dataset preparation:
 Cifar-10, Cifar-100, MNIST, SVHN datasets can be automatically downloaded with torchvision.datasets; Tiny-Imagenet requires manual downloading.
 
-# Experiments
+# Experiments  
 To run on Cifar-100, ResNet32, excute:
 
     python main_incremental.py --dataset cifar100 --network 'resnet32' --nepochs 200 --learning_rate 1e-3 --ensemble_step 0.70 --ensemble_step_diff 0.93 --reg 0.01 --momentum 0.9
