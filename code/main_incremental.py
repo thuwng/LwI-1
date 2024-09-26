@@ -9,7 +9,7 @@ import argparse
 import importlib
 import matplotlib.pyplot as plt
 import numpy as np
-from functools import reduce
+from functools import reduce   
 import yaml
 import src.utils as utils
 import src.approach
