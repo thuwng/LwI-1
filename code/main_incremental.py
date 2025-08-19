@@ -36,7 +36,7 @@ def _parse_args():
             parser.set_defaults(**cfg)
 
     # The main arg parser parses the rest of the args, the usual
-    # defaults will have been overridden if config file specified.
+    # defaults will have been overridden if config file specified
     args = parser.parse_args(remaining)
 
     # Cache the args as a text string to save them in the output dir later
