@@ -228,7 +228,8 @@ def main(argv=None):
         init_model = net()
     from src.approach.incremental_learning import Inc_Learning_Appr
     Appr = getattr(importlib.import_module(name='src.approach.' + args.approach), 'Inc_Learning_Appr')
-    assert issubclass(Appr, Inc_Learning_Appr)
+    if Appr is not Inc_Learning_Appr:
+        raise ValueError(f"Class {Appr.__name__} must be Inc_Learning_Appr or its subclass")
     appr_args, extra_args = Appr.extra_parser(extra_args)
     for arg in np.sort(list(vars(appr_args).keys())):
         print('\t' + arg + ':', getattr(appr_args, arg))
