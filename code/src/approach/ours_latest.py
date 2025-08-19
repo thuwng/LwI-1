@@ -17,7 +17,7 @@ from src.loggers.exp_logger import ExperimentLogger
 from src.datasets.exemplars_dataset import ExemplarsDataset
 from src.networks.lenet import LeNetArch
 from src.networks.network import LLL_Net
-from utils.utils import construct_log, print_args
+from src.utils import construct_log, print_args
 
 
 def get_config():
