@@ -227,7 +227,7 @@ def main(argv=None):
         net = getattr(importlib.import_module(name='src.networks'), args.network)
         init_model = net()
     from src.approach.incremental_learning import Inc_Learning_Appr
-    Appr = getattr(importlib.import_module(name='src.approach.' + args.approach), 'Appr')
+    Appr = getattr(importlib.import_module(name='src.approach.' + args.approach), 'Inc_Learning_Appr')
     assert issubclass(Appr, Inc_Learning_Appr)
     appr_args, extra_args = Appr.extra_parser(extra_args)
     for arg in np.sort(list(vars(appr_args).keys())):
