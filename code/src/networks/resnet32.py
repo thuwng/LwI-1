@@ -103,15 +103,17 @@ class ResNet(nn.Module):
             layers.append(block(self.inplanes, planes))
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, return_features=False):  # thêm tham số return_features
         x = self.relu(self.bn1(self.conv1(x)))
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
-        x = self.fc(x)
-        return x
+        if return_features:
+            return x                     # trả về feature backbone
+        else:
+            return self.fc(x)            # hoặc output của classifier
 
 def resnet32(pretrained=False, **kwargs):
     if pretrained:
