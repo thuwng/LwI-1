@@ -303,7 +303,9 @@ def main(argv=None):
         print('Task {:2d}'.format(t))
         print('*' * 108)
 
+        print(f"Task {t}, Number of classes: {taskcla[t][1]}")
         net.add_head(taskcla[t][1])
+        print(f"After adding head, heads: {net.heads}")
         net.to(device)
 
         # GridSearch
