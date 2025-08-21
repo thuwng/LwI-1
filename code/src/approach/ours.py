@@ -62,7 +62,7 @@ class Appr(Inc_Learning_Appr):
 
     def train_loop(self, t, trn_loader, val_loader):
         # Cập nhật tầng đầu ra của mô hình dựa trên số lớp của task hiện tại
-        num_classes = self.model.taskcla[t][1]
+        num_classes = self.taskcla[t][1] if hasattr(self, 'taskcla') else self.task_cls[t]
         self.model.heads[-1] = nn.Linear(self.model.heads[-1].in_features, num_classes).to(self.device)
         self.model2.heads[-1] = nn.Linear(self.model2.heads[-1].in_features, num_classes).to(self.device)
         
