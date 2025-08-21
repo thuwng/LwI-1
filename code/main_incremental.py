@@ -36,7 +36,7 @@ def _parse_args():
             parser.set_defaults(**cfg)
 
     # The main arg parser parses the rest of the args, the usual
-    # defaults will have been overridden if config file specified
+    # defaults will have been overridden if config file specified.
     args = parser.parse_args(remaining)
 
     # Cache the args as a text string to save them in the output dir later
@@ -172,7 +172,7 @@ def main(argv=None):
     args.fix_bn = False
     args.eval_on_train = False
     args.correction = True
-    # args.dataset = "imagenet_256"
+    args.dataset = "imagenet_256"
     args.debug = False
     args.dist_normalize = True
     args.eval_aligned = False
@@ -197,11 +197,7 @@ def main(argv=None):
     args.wd = 0
     args.act_num_samples = 200
 
-    # args.results_path = os.path.expanduser(args.results_path)
-    args.results_path = '/kaggle/working/results'
-    args.output = '/kaggle/working/output'
-    os.makedirs(args.results_path, exist_ok=True)
-    os.makedirs(args.output, exist_ok=True)
+    args.results_path = os.path.expanduser(args.results_path)
     setup_seed(args.seed)
 
     base_kwargs = args
@@ -217,7 +213,6 @@ def main(argv=None):
     print('=' * 108)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
     pickle_log = {'train': {}, 'eval': {}, 'test': {}, 'eval_noema': {}}
     # Args -- Network
     from src.networks.network import LLL_Net
@@ -232,13 +227,8 @@ def main(argv=None):
         net = getattr(importlib.import_module(name='src.networks'), args.network)
         init_model = net()
     from src.approach.incremental_learning import Inc_Learning_Appr
-    try:
-        module = importlib.import_module(name='src.approach.' + args.approach)
-        Appr = getattr(module, 'Appr', None)
-        if not Appr or not issubclass(Appr, Inc_Learning_Appr):
-            raise ValueError(f"Class {args.approach}.Appr must be a subclass of Inc_Learning_Appr")
-    except ImportError as e:
-        raise ImportError(f"Failed to import module src.approach.{args.approach}: {str(e)}")
+    Appr = getattr(importlib.import_module(name='src.approach.' + args.approach), 'Appr')
+    assert issubclass(Appr, Inc_Learning_Appr)
     appr_args, extra_args = Appr.extra_parser(extra_args)
     for arg in np.sort(list(vars(appr_args).keys())):
         print('\t' + arg + ':', getattr(appr_args, arg))
@@ -289,9 +279,7 @@ def main(argv=None):
     net = LLL_Net(init_model, remove_existing_head=not args.keep_existing_head)
     first_train_ds = trn_loader[0].dataset
     transform, class_indices = first_train_ds.transform, first_train_ds.class_indices
-    base_kwargs = vars(base_kwargs).copy()
-    base_kwargs.pop('gpu', None)  # Loại bỏ tham số gpu nếu có
-    appr = Appr(net, device, logger=logger, exemplars_dataset=None, **vars(base_kwargs))
+    appr = Appr(net, device, base_kwargs,None,None)
 
     # GridSearch
     if args.gridsearch_tasks > 0:
@@ -393,4 +381,3 @@ def main(argv=None):
 
 if __name__ == '__main__':
     main()
-
