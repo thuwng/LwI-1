@@ -15,6 +15,7 @@ from src.datasets.exemplars_dataset import ExemplarsDataset
 from src.networks.lenet import LeNetArch
 from src.networks.vggnet import VggNet
 from src.networks import tvmodels, allmodels, set_tvmodel_head_var
+# from src.networks.vggnet import VggNet
 from src.networks.network import LLL_Net
 from src.approach.our_ot import fuse_bn_recursively
 
@@ -102,11 +103,19 @@ class Inc_Learning_Appr:
     def __init__(self, model, device, args, logger: ExperimentLogger = None,
                  exemplars_dataset: ExemplarsDataset = None):
         self.model = model
+        # self.model2 = LeNetArch()
+        # tvnet = getattr(importlib.import_module(name='torchvision.models'), args.network)
+        # self.model2 = tvnet(pretrained=args.pretrained)
+        # set_tvmodel_head_var(self.model2)
         net1 = getattr(importlib.import_module(name='src.networks'), args.network)
+        # WARNING: fixed to pretrained False for other model (non-torchvision)
         init_model = net1()
         self.model2 = LLL_Net(init_model, True)
         self.model2.add_head(10)
         self.model2.to(device)
+        # for m in self.model2.modules():
+        #     if isinstance(m, torch.nn.Conv2d):
+        #         torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
         self.device = device
         self.nepochs = args.nepochs
         self.lr = args.learning_rate
@@ -133,14 +142,9 @@ class Inc_Learning_Appr:
         self.old_model1 = None
         self._logger = logging.getLogger('train')
         self.al = args.al
-        self.decay_mile_stone = [80, 120]
+        self.decay_mile_stone = [80,120]
         self.lr_decay = 0.1
-        # Thêm thuộc tính taskcla
-        self.taskcla = getattr(args, 'taskcla', None)  # Lấy taskcla từ args nếu có
-        if self.taskcla is None:
-            raise ValueError("taskcla not provided in args")
-        self.task_cls = torch.tensor([cla for _, cla in self.taskcla])  # Chuyển thành tensor [20, 20, ...]
-        self.task_offset = torch.tensor([0] + [sum(cla for _, cla in self.taskcla[:i]) for i in range(1, len(self.taskcla))])
+        
 
     @staticmethod
     def extra_parser(args):
@@ -162,15 +166,24 @@ class Inc_Learning_Appr:
             params = list(model.model.parameters()) + list(model.heads[-1].parameters())
         else:
             params = model.parameters()
+        # return torch.optim.SGD(params, lr=self.lr, weight_decay=self.wd, momentum=self.momentum)
         return torch.optim.Adam(params, lr=self.lr)
 
     def train(self, t, trn_loader, val_loader):
         """Main train structure"""
+        
+        # self.old_model = deepcopy(self.model)
+        # self.model.freeze_all()
+        # self.old_model.freeze_all()
         self.pre_train_process(t, trn_loader)
         self.train_loop(t, trn_loader, val_loader)
         self.post_train_process(t, trn_loader)
         self.model2.add_head(10)
         self.model2.to(self.device)
+        # for m in self.model2.modules():
+        #     # print('m',m)
+        #     if isinstance(m, torch.nn.Conv2d):
+        #         torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
 
     def pre_train_process(self, t, trn_loader):
         """Runs before training all epochs of the task (before the train session)"""
@@ -208,6 +221,8 @@ class Inc_Learning_Appr:
                 warmupclock2 = time.time()
                 print('| Warm-up Epoch {:3d}, time={:5.1f}s/{:5.1f}s | Train: loss={:.3f}, TAw acc={:5.1f}% |'.format(
                     e + 1, warmupclock1 - warmupclock0, warmupclock2 - warmupclock1, trn_loss, 100 * trn_acc))
+                # self.logger.log_scalar(task=t, iter=e + 1, name="loss", value=trn_loss, group="warmup")
+                # self.logger.log_scalar(task=t, iter=e + 1, name="acc", value=100 * trn_acc, group="warmup")
 
     def train_loop(self, t, trn_loader, val_loader):
         """Contains the epochs loop"""
@@ -215,11 +230,28 @@ class Inc_Learning_Appr:
         best_loss = np.inf
         best_acc = 0
         patience = self.lr_patience
-        target_model = self.model2
+        target_model =  self.model2
         self.optimizer = self._get_optimizer(self.model2)
         scheduler = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, milestones=self.decay_mile_stone, gamma=self.lr_decay)
+        # log_name = 'former'
+        # for n, p in target_model.model.named_parameters():
+        #     self._logger.info(
+        #                         'logger: {};'
+        #                         'task: {task:};'
+        #                         'weigths: {weights:};  '.format(
+        #             log_name, task=t, weights=p)
+        #         )
+
+        
         best_model = self.model2.get_copy()
+        # best_model1 = target_model.get_copy()
         idxs = 0
+        # for n, p in target_model.model.named_parameters():
+        #     if idxs == 0:
+        #         print(p)
+        #     idxs = idxs+1
+        # self.optimizer = self._get_optimizer(self.model2)
+        # print(best_model.named_parameters())
         # Loop epochs
         for e in range(self.nepochs):
             # Train
@@ -251,6 +283,10 @@ class Inc_Learning_Appr:
         return 
 
     def _federated_averaging_ewc(self):
+        '''
+        average the parameters of two models based on ot_based_fusion method
+        '''
+        # the following code can be replaced by other functions
         parameters, fisherss = ot.get_wassersteinized_layers_modularized_ewc(
             args=self.config, device=self.device, networks=[self.model, self.model2],
             fishers=[self.fisher0, self.fisher1])
@@ -258,8 +294,10 @@ class Inc_Learning_Appr:
         state_dict_1 = {}
         state_dict_2 = {}
         for n, p in self.model.model.named_parameters():
+            # print('n1',p)
             state_dict_1[n] = p
         for n, p in self.model2.model.named_parameters():
+            # print('n2',p)
             state_dict_2[n] = p
         for n, p in self.model.heads.named_parameters():
             state_dict_1[n] = p
@@ -268,13 +306,16 @@ class Inc_Learning_Appr:
         state_dict_11 = {}
         state_dict_22 = {}
         for idx, (name, _) in enumerate(state_dict_1.items()):
+            # print(name)
             if idx >= (len(state_dict_1) - len(self.model.heads)):
                 name1 = 'heads.' + str(idx - (len(state_dict_1) - len(self.model.heads))) + '.' + 'weight'
                 if idx != (len(state_dict_1) - 1):
                     state_dict_11[name1] = state_dict_1[name]
                 else:
                     name3 = '0.weight'
+                    # state_dict_22[name3] = state_dict_1[name]
                     state_dict_11[name1] = state_dict_2[name]
+
             else:
                 name1 = 'model.' + name
                 state_dict_11[name1] = parameters[idx]
@@ -282,27 +323,37 @@ class Inc_Learning_Appr:
         self.model2.load_state_dict(state_dict_11)
 
     def _federated_averaging_ot(self):
+        '''
+        average the parameters of two models based on ot_based_fusion method
+        '''
+        # the following code can be replaced by other functions
         parameters, loss = ot.get_wassersteinized_layers_modularized(
             args=self.config, device=self.device, networks=[self.model, self.model2])
         state_dict_1 = {}
         state_dict_2 = {}
         for n in self.model.model.state_dict():
+            # print('n1',n)
             if 'num_batches_tracked' in n:
                 continue
             state_dict_1[n] = self.model.model.state_dict()[n]
+        print(len(state_dict_1))
         for n in self.model2.model.state_dict():
+            # print('n2',n)
             if 'num_batches_tracked' in n:
                 continue
             state_dict_2[n] = self.model2.model.state_dict()[n]
         for n, p in self.model.heads.named_parameters():
+            # print('n1',n)
             state_dict_1[n] = p
         for n, p in self.model2.heads.named_parameters():
             state_dict_2[n] = p
         state_dict_11 = {}
         state_dict_22 = {}
         for idx, (name, _) in enumerate(state_dict_1.items()):
+            # print(name)
             if idx >= (len(state_dict_1) - len(self.model.heads)):
                 name1 = 'heads.' + str(idx - (len(state_dict_1) - len(self.model.heads))) + '.' + 'weight'
+                # print('change',name1)
                 if idx != (len(state_dict_1) - 1):
                     if idx == (len(state_dict_1) - len(self.model.heads)):
                         state_dict_11[name1] = state_dict_1[name]
@@ -311,21 +362,29 @@ class Inc_Learning_Appr:
                 else:
                     name3 = '0.weight'
                     state_dict_11[name1] = state_dict_2[name]
+
             else:
                 name1 = 'model.' + name
                 state_dict_11[name1] = parameters[idx]
+                # state_dict_22[name1] = parameters[idx]
         self.model.load_state_dict(state_dict_11)  
         self.model2.load_state_dict(state_dict_11)
-        return loss
 
     def _federated_averaging_ot1(self):
+        '''
+        average the parameters of two models based on ot_based_fusion method
+        '''
+        # the following code can be replaced by other functions
         parameters, loss = ot.get_wassersteinized_layers_modularized1(
             args=self.config, device=self.device, networks=[self.old_model1, self.model])
+
         state_dict_1 = {}
         state_dict_2 = {}
         for n, p in self.old_model1.model.named_parameters():
+            # print('n1',p)
             state_dict_1[n] = p
         for n, p in self.model.model.named_parameters():
+            # print('n2',p)
             state_dict_2[n] = p
         for n, p in self.old_model1.heads.named_parameters():
             state_dict_1[n] = p
@@ -334,13 +393,16 @@ class Inc_Learning_Appr:
         state_dict_11 = {}
         state_dict_22 = {}
         for idx, (name, _) in enumerate(state_dict_2.items()):
+            # print(name)
             if idx >= (len(state_dict_2) - len(self.model.heads)):
                 name1 = 'heads.' + str(idx - (len(state_dict_2) - len(self.model.heads))) + '.' + 'weight'
+                # print('change',name1)
                 if idx != (len(state_dict_2) - len(self.model.heads)):
                     state_dict_11[name1] = state_dict_2[name]
                 else:
                     name3 = '0.weight'
                     state_dict_11[name1] = state_dict_1[name]
+
             else:
                 name1 = 'model.' + name
                 state_dict_11[name1] = parameters[idx]
@@ -348,6 +410,7 @@ class Inc_Learning_Appr:
         self.model2.load_state_dict(state_dict_11)
 
     def _federated_averaging_ot_test(self):
+        # the following code can be replaced by other functions
         parameters, loss = ot.get_wassersteinized_layers_modularized(
             args=self.config, device=self.device, networks=[self.model, self.model2])
         return loss
@@ -464,9 +527,11 @@ class Inc_Learning_Appr:
             total_loss, total_acc_taw, total_acc_tag, total_num = 0, 0, 0, 0
             model.eval()
             for images, targets in val_loader:
-                outputs = model(images.to(self.device))
+                # Forward current model
+                outputs = model(images.to(self.device))  # output为一个list list中的shape为[64,2]
                 loss = self.criterion1(t, outputs, targets.to(self.device))
                 hits_taw, hits_tag = self.calculate_metrics(outputs, targets)
+                # Log
                 total_loss += loss.item() * len(targets)
                 total_acc_taw += hits_taw.sum().item()
                 total_acc_tag += hits_tag.sum().item()
@@ -485,6 +550,7 @@ class Inc_Learning_Appr:
         return loss, Taw, Tag, OrderedDict([('task', t), ('loss', loss), ('Taw', Taw), ('Tag', Tag)])
     
     def eval1(self, t, val_loader):
+        """Contains the evaluation code"""
         list1 = np.array(0)
         list2 = np.array(0)
         with torch.no_grad():
@@ -524,8 +590,8 @@ class Inc_Learning_Appr:
     def calculate_metrics(self, outputs, targets):
         pred = torch.zeros_like(targets.to(self.device))
         for m in range(len(pred)):
-            this_task = (self.task_cls.cumsum(0) <= targets[m]).sum()
-            pred[m] = outputs[this_task][m].argmax() + self.task_offset[this_task]
+            this_task = (self.model.task_cls.cumsum(0) <= targets[m]).sum()
+            pred[m] = outputs[this_task][m].argmax() + self.model.task_offset[this_task]
         hits_taw = (pred == targets.to(self.device)).float()
         if self.multi_softmax:
             outputs = [torch.nn.functional.log_softmax(output, dim=1) for output in outputs]
@@ -556,9 +622,9 @@ class Inc_Learning_Appr:
         if t > 0:
             loss += self.cross_entropy(torch.cat(outputs[:t], dim=1),
                                        torch.cat(outputs_old[:t], dim=1), exp=0.5)
-        return loss + torch.nn.functional.cross_entropy(outputs[t], targets.long() - self.task_offset[t])
+        return loss + torch.nn.functional.cross_entropy(outputs[t], targets.long() - self.model.task_offset[t])
 
     def criterion1(self, t, outputs, targets):
         """Returns the loss value"""
 
-        return torch.nn.functional.cross_entropy(outputs[t], targets.long() - self.task_offset[t])
+        return torch.nn.functional.cross_entropy(outputs[t], targets.long() - self.model.task_offset[t])
