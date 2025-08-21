@@ -35,12 +35,19 @@ class LLL_Net(nn.Module):
 
     def add_head(self, num_outputs):
         print(f"Adding head with {num_outputs} classes")
-        # Xóa tất cả head cũ để tránh nhầm lẫn
-        self.heads = nn.ModuleList([nn.Linear(self.out_size, num_outputs, bias=False)])
-        self.task_cls = torch.tensor([num_outputs], dtype=torch.int64)
+        # Append thay vì overwrite
+        self.heads.append(nn.Linear(self.out_size, num_outputs, bias=False))
+
+        # Cập nhật task_cls
+        self.task_cls = torch.cat([self.task_cls, torch.tensor([num_outputs], dtype=torch.int64)])
+
+        # Cập nhật task_offset
+        new_offset = self.task_offset[-1] + num_outputs
+        self.task_offset = torch.cat([self.task_offset, torch.tensor([new_offset], dtype=torch.int64)])
+
         print("self.task_cls", self.task_cls)
-        self.task_offset = torch.tensor([0], dtype=torch.int64)
         print("self.task_offset", self.task_offset)
+
 
     def forward(self, x, return_features=False, task_id=None):
         x = self.model(x)
