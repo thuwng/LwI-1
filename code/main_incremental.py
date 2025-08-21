@@ -289,6 +289,8 @@ def main(argv=None):
     net = LLL_Net(init_model, remove_existing_head=not args.keep_existing_head)
     first_train_ds = trn_loader[0].dataset
     transform, class_indices = first_train_ds.transform, first_train_ds.class_indices
+    base_kwargs = vars(base_kwargs).copy()
+    base_kwargs.pop('gpu', None)  # Loại bỏ tham số gpu nếu có
     appr = Appr(net, device, logger=logger, exemplars_dataset=None, **vars(base_kwargs))
 
     # GridSearch

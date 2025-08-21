@@ -15,6 +15,7 @@ from argparse import ArgumentParser
 import src.approach.our_ot as ot
 from src.loggers.exp_logger import ExperimentLogger
 from src.datasets.exemplars_dataset import ExemplarsDataset
+from src.networks import allmodels
 from src.networks.lenet import LeNetArch
 from src.networks.network import LLL_Net
 from src.utils import construct_log, print_args
@@ -96,14 +97,20 @@ def get_config():
 
 
 class Appr(Inc_Learning_Appr):
-    def __init__(self, args, model, device, nepochs=1, lr=0.05, lr_min=1e-4, lr_factor=3, lr_patience=5, clipgrad=10000,
-                 momentum=0, wd=0, multi_softmax=False, wu_nepochs=0, wu_lr_factor=1, fix_bn=False,
-                 eval_on_train=False, logger: ExperimentLogger = None, exemplars_dataset: ExemplarsDataset = None):
+    def __init__(self, model, device, nepochs=1, lr=0.05, lr_min=1e-4, lr_factor=3, lr_patience=5, clipgrad=10000,
+                momentum=0, wd=0, multi_softmax=False, wu_nepochs=0, wu_lr_factor=1, fix_bn=False,
+                eval_on_train=False, logger: ExperimentLogger = None, exemplars_dataset: ExemplarsDataset = None, **kwargs):
+        super().__init__(model, device, nepochs, lr, lr_min, lr_factor, lr_patience, clipgrad, momentum, wd,
+                        multi_softmax, wu_nepochs, wu_lr_factor, fix_bn, eval_on_train, logger, exemplars_dataset)
         self.model = model
-        self.model2 = LeNetArch()
-        self.model2 = LLL_Net(self.model2, True)
+        if self.config.network in allmodels:
+            net = getattr(importlib.import_module(name='src.networks'), self.config.network)
+            self.model2 = net()
+        else:
+            self.model2 = LeNetArch()  # Fallback to LeNet if network not found
+        self.model2 = LLL_Net(self.model2, remove_existing_head=True)
         self.model2.add_head(2)
-        self.device = args1.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device
         self.nepochs = nepochs
         self.lr = lr
         self.lr_min = lr_min
@@ -122,19 +129,17 @@ class Appr(Inc_Learning_Appr):
         self.eval_on_train = eval_on_train
         self.tt = 0
         self.optimizer = None
-        self.config = args
+        self.config = get_config()
         self.fisher0 = {}
         self.fisher1 = {}
         self.old_model = None
-
-        self.output_dir = args.output if args.output else './output'
+        self.output_dir = self.config.output if self.config.output else '/kaggle/working/output'
         os.makedirs(self.output_dir, exist_ok=True)
-        construct_log(os.path.join(self.output_dir, 'train.log'), only_file=args.ssh)
+        construct_log(os.path.join(self.output_dir, 'train.log'), only_file=False)
         self._logger = logging.getLogger('train')
         self._logger.info(sys.argv)
-        print_args(args, self._logger)
-
-        args_save = copy.deepcopy(args)
+        print_args(self.config, self._logger)
+        args_save = copy.deepcopy(self.config)
         del args_save.device
         with open(os.path.join(self.output_dir, 'args.json'), "w") as f:
             json.dump(args_save.__dict__, f, indent=2)
@@ -225,7 +230,7 @@ class Appr(Inc_Learning_Appr):
             clock1 = time.time()
             if self.eval_on_train:
                 train_loss, train_acc, _ = self.eval(t, trn_loader, target_model)
-                self.pickle_log['eval'][j] = dict(result)
+                self.pickle_log['eval'][t] = dict(train_loss=train_loss, train_acc=train_acc)
 
                 with open(os.path.join(self.output_dir, "log.pkl"), "wb") as f:
                     pickle.dump(self.pickle_log, f)
@@ -288,24 +293,15 @@ class Appr(Inc_Learning_Appr):
         for n, p in self.model2.heads.named_parameters():
             state_dict_2[n] = p
         state_dict_11 = {}
-        state_dict_22 = {}
-        for idx, (name, _) in enumerate(state_dict_1.items()):
-            # print(name)
-            if idx >= (len(state_dict_1) - len(self.model.heads)):
-                name1 = 'heads.' + str(idx - (len(state_dict_1) - len(self.model.heads))) + '.' + 'weight'
-                # print('change',name1)
-                if idx != (len(state_dict_1) - 1):
-                    if idx == (len(state_dict_1) - len(self.model.heads)):
-                        state_dict_11[name1] = state_dict_1[name]
-                    else:
-                        state_dict_11[name1] = state_dict_1[name]
+        for idx, (name, param) in enumerate(state_dict_1.items()):
+            if name.startswith('heads.'):
+                head_idx = int(name.split('.')[1])
+                if head_idx < len(self.model.heads) - 1:
+                    state_dict_11[name] = state_dict_1[name]
                 else:
-                    name2 = '0.weight'
-                    state_dict_11[name1] = state_dict_2[name2]
-
+                    state_dict_11[name] = state_dict_2.get(f'heads.0.{name.split(".")[-1]}', state_dict_1[name])
             else:
-                name1 = 'model.' + name
-                state_dict_11[name1] = parameters[idx]
+                state_dict_11[name] = parameters[idx]
         self.model.load_state_dict(state_dict_11)
         self.model2.load_state_dict(state_dict_11)
 
@@ -323,21 +319,15 @@ class Appr(Inc_Learning_Appr):
         for n, p in self.model2.heads.named_parameters():
             state_dict_2[n] = p
         state_dict_11 = {}
-        state_dict_22 = {}
-        for idx, (name, _) in enumerate(state_dict_1.items()):
-            if idx >= (len(state_dict_1) - len(self.model.heads)):
-                name1 = 'heads.' + str(idx - (len(state_dict_1) - len(self.model.heads))) + '.' + 'weight'
-                if idx != (len(state_dict_1) - 1):
-                    if idx == (len(state_dict_1) - len(self.model.heads)):
-                        state_dict_11[name1] = state_dict_1[name]
-                    else:
-                        state_dict_11[name1] = state_dict_1[name]
+        for idx, (name, param) in enumerate(state_dict_1.items()):
+            if name.startswith('heads.'):
+                head_idx = int(name.split('.')[1])
+                if head_idx < len(self.model.heads) - 1:
+                    state_dict_11[name] = state_dict_1[name]
                 else:
-                    state_dict_11[name1] = state_dict_2[name]
-
+                    state_dict_11[name] = state_dict_2.get(f'heads.0.{name.split(".")[-1]}', state_dict_1[name])
             else:
-                name1 = 'model.' + name
-                state_dict_11[name1] = parameters[idx]
+                state_dict_11[name] = parameters[idx]
 
         self.model.load_state_dict(state_dict_11)
         self.model2.load_state_dict(state_dict_11)
