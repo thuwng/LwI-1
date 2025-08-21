@@ -35,23 +35,30 @@ class LLL_Net(nn.Module):
 
     def add_head(self, num_outputs):
         print(f"Adding head with {num_outputs} classes")
-        self.heads.append(nn.Linear(self.out_size, num_outputs, bias=False))
-        self.task_cls = torch.tensor([head.out_features for head in self.heads], dtype=torch.int64)
+        # Xóa tất cả head cũ để tránh nhầm lẫn
+        self.heads = nn.ModuleList([nn.Linear(self.out_size, num_outputs, bias=False)])
+        self.task_cls = torch.tensor([num_outputs], dtype=torch.int64)
         print("self.task_cls", self.task_cls)
-        self.task_offset = torch.cat([torch.LongTensor([0]), self.task_cls.cumsum(0)[:-1]])
+        self.task_offset = torch.tensor([0], dtype=torch.int64)
         print("self.task_offset", self.task_offset)
 
-    def forward(self, x, return_features=False):
+    def forward(self, x, return_features=False, task_id=None):
         x = self.model(x)
-        assert (len(self.heads) > 0), "Cannot access any head"
-        y = []
-        for i, head in enumerate(self.heads):
-            out = head(x)
-            print(f"Head {i} output shape: {out.shape}")
-            y.append(out)
-        if return_features:
-            return y, x
+        assert len(self.heads) > 0, "Cannot access any head"
+        if task_id is not None:
+            # Chỉ sử dụng head của task hiện tại
+            y = self.heads[task_id](x)
+            print(f"Head {task_id} output shape: {y.shape}")
+            if return_features:
+                return [y], x
+            return [y]
         else:
+            # Trả về đầu ra của tất cả head (cho đánh giá)
+            y = [head(x) for head in self.heads]
+            for i, out in enumerate(y):
+                print(f"Head {i} output shape: {out.shape}")
+            if return_features:
+                return y, x
             return y
 
     def get_copy(self):
