@@ -118,7 +118,7 @@ def resnet32(pretrained=False, **kwargs):
         raise NotImplementedError
     # change n=3 for ResNet-20, and n=9 for ResNet-56
     n = 5
-    model = ResNet(BasicBlock, [n, n, n], **kwargs)
+    model = resnet32(num_classes=20)
     return model
 
 
