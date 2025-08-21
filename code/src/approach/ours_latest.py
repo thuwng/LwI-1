@@ -8,7 +8,7 @@ import sys
 import time
 from collections import OrderedDict  
 from copy import deepcopy
-
+from src.approach.incremental_learning import Inc_Learning_Appr
 import torch
 import numpy as np
 from argparse import ArgumentParser
@@ -66,10 +66,10 @@ def get_config():
     args1.fix_bn = False
     args1.eval_on_train = False
     args1.correction = True
-    args1.dataset = "cifar10"
+    args1.dataset = "cifar100"
     args1.debug = False
     args1.dist_normalize = True
-    args1.ensemble_step = 0.6
+    args1.ensemble_step = 0.7
     args1.eval_aligned = False
     args1.exact = 2
     args1.geom_ensemble_type = "wts"
@@ -95,7 +95,7 @@ def get_config():
     return args1
 
 
-class Inc_Learning_Appr:
+class Appr(Inc_Learning_Appr):
     def __init__(self, args, model, device, nepochs=1, lr=0.05, lr_min=1e-4, lr_factor=3, lr_patience=5, clipgrad=10000,
                  momentum=0, wd=0, multi_softmax=False, wu_nepochs=0, wu_lr_factor=1, fix_bn=False,
                  eval_on_train=False, logger: ExperimentLogger = None, exemplars_dataset: ExemplarsDataset = None):
@@ -103,7 +103,7 @@ class Inc_Learning_Appr:
         self.model2 = LeNetArch()
         self.model2 = LLL_Net(self.model2, True)
         self.model2.add_head(2)
-        self.device = device
+        self.device = args1.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.nepochs = nepochs
         self.lr = lr
         self.lr_min = lr_min
