@@ -137,8 +137,11 @@ class Appr(Inc_Learning_Appr):
 
     def criterion(self, outputs, targets, t, ppath=None):
         loss = 0
-        # chuẩn hóa nhãn local cho task hiện tại
-        task_target = targets.long() - self.model.task_offset[t]
+        if not isinstance(targets, torch.Tensor):
+            targets = torch.tensor(targets)
+        targets = targets.long().to(self.device)
+        task_target = targets - self.model.task_offset[t]
+
 
         # kiểm tra nhãn có vượt quá số class trong outputs không
         if task_target.min() < 0 or task_target.max() >= outputs[t].size(1):
