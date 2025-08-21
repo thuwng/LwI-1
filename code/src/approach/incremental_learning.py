@@ -101,21 +101,26 @@ class Inc_Learning_Appr:
     """Basic class for implementing incremental learning approaches"""
 
     def __init__(self, model, device, args, logger: ExperimentLogger = None,
-                 exemplars_dataset: ExemplarsDataset = None):
-        self.model = model
-        # self.model2 = LeNetArch()
-        # tvnet = getattr(importlib.import_module(name='torchvision.models'), args.network)
-        # self.model2 = tvnet(pretrained=args.pretrained)
-        # set_tvmodel_head_var(self.model2)
+                exemplars_dataset: ExemplarsDataset = None):
+        # Khởi tạo self.model với LLL_Net
+        self.model = LLL_Net(model, remove_last_layer=True)
+        self.model.heads = torch.nn.ModuleList()
+        self.model.add_head(10)  # Head cho task đầu tiên (CIFAR-10)
+        self.model.to(device)
+
+        # Khởi tạo self.model2
         net1 = getattr(importlib.import_module(name='src.networks'), args.network)
-        # WARNING: fixed to pretrained False for other model (non-torchvision)
         init_model = net1()
-        self.model2 = LLL_Net(init_model, True)
+        self.model2 = LLL_Net(init_model, remove_last_layer=True)
+        self.model2.heads = torch.nn.ModuleList()
         self.model2.add_head(10)
         self.model2.to(device)
-        # for m in self.model2.modules():
-        #     if isinstance(m, torch.nn.Conv2d):
-        #         torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+
+        # Khởi tạo trọng số Conv2d (tùy chọn, nếu cần)
+        for m in self.model2.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                torch.nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+
         self.device = device
         self.nepochs = args.nepochs
         self.lr = args.learning_rate
@@ -142,7 +147,7 @@ class Inc_Learning_Appr:
         self.old_model1 = None
         self._logger = logging.getLogger('train')
         self.al = args.al
-        self.decay_mile_stone = [80,120]
+        self.decay_mile_stone = [80, 120]
         self.lr_decay = 0.1
         
 
@@ -196,8 +201,9 @@ class Inc_Learning_Appr:
                 warmupclock0 = time.time()
                 self.model.heads[-1].train()  # 训练
                 for images, targets in trn_loader:
-                    outputs = self.model(images.to(self.device))
-                    loss = self.warmup_loss(outputs[t], targets.to(self.device) - self.model.task_offset[t])
+                    features = self.model(images.to(self.device), return_features=True)
+                    outputs = self.model.heads[t](features)
+                    loss = self.warmup_loss(outputs, targets.to(self.device) - self.model.task_offset[t])
                     self.optimizer.zero_grad()
                     loss.backward()
                     torch.nn.utils.clip_grad_norm_(self.model.heads[-1].parameters(), self.clipgrad)
@@ -501,8 +507,9 @@ class Inc_Learning_Appr:
             outputs_old = None
             if t > 0:
                 outputs_old = self.old_model(images.to(self.device))
-            outputs = model(images.to(self.device))
-            loss = self.criterion(t, outputs, targets.to(self.device), outputs_old)
+            features = model(images.to(self.device), return_features=True)
+            outputs = model.heads[t](features)
+            loss = self.criterion(t, [outputs], targets.to(self.device), outputs_old)
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -514,8 +521,8 @@ class Inc_Learning_Appr:
         if self.fix_bn and t > 0:
             model.freeze_bn()
         for images, targets in trn_loader:
-            outputs = model(images.to(self.device))
-            outputs = torch.cat(outputs, dim=1)
+            features = model(images.to(self.device), return_features=True)
+            outputs = model.heads[t](features)
             loss = self.criterion1(t, outputs, targets.to(self.device))
             self.optimizer.zero_grad()
             loss.backward()
@@ -528,7 +535,8 @@ class Inc_Learning_Appr:
             model.eval()
             for images, targets in val_loader:
                 # Forward current model
-                outputs = model(images.to(self.device))  # output为一个list list中的shape为[64,2]
+                features = model(images.to(self.device), return_features=True)
+                outputs = [model.heads[i](features) for i in range(len(model.heads))]  # Lấy outputs từ tất cả heads
                 loss = self.criterion1(t, outputs, targets.to(self.device))
                 hits_taw, hits_tag = self.calculate_metrics(outputs, targets)
                 # Log
