@@ -13,7 +13,6 @@ from functools import reduce
 import yaml
 import src.utils as utils
 import src.approach
-# from search_new import construct_log
 from src.utils import setup_seed, print_args, construct_log
 from src.loggers.exp_logger import MultiLogger
 from src.loggers.disk_logger import Logger
@@ -105,7 +104,7 @@ def main(argv=None):
                         help='Disable removing classifier last layer (default=%(default)s)')
     parser.add_argument('--pretrained', action='store_true',
                         help='Use pretrained backbone (default=%(default)s)')
-    # training argsW
+    # training args
     parser.add_argument('--approach', default='ours', type=str, choices=src.approach.__all__,
                         help='Learning approach used (default=%(default)s)', metavar="APPROACH")
     parser.add_argument('--nepochs', default=200, type=int, required=False,
@@ -279,7 +278,7 @@ def main(argv=None):
     net = LLL_Net(init_model, remove_existing_head=not args.keep_existing_head)
     first_train_ds = trn_loader[0].dataset
     transform, class_indices = first_train_ds.transform, first_train_ds.class_indices
-    appr = Appr(net, device, base_kwargs,None,None)
+    appr = Appr(net, device, argparse.Namespace(**vars(base_kwargs), taskcla=taskcla), None, None)
 
     # GridSearch
     if args.gridsearch_tasks > 0:
@@ -354,26 +353,19 @@ def main(argv=None):
     for name, metric in zip(['TAwa', 'TAga', 'TAwf', 'TAgf'], [acc_taw, acc_tag, forg_taw, forg_tag]):
         _logger.info('*' * 108)
         _logger.info('{}'.format(name))
-        # _logger.info('name: {name: };'.format(name))
         for i in range(metric.shape[0]):
-            # _logger.info('\t', end='')
             for j in range(metric.shape[1]):
-                # pass
                 _logger.info('{:5.1f}% '.format(100 * metric[i, j]))
             if np.trace(metric) == 0.0:
                 if i > 0:
-                    # pass
                     r1 = 100 * metric[i, :i].mean()
                     _logger.info('Avg.:{:5.1f}% '.format(100 * metric[i, :i].mean()))
             else:
-                # pass
                 r1 = 100 * metric[i, :i + 1].mean()
                 _logger.info('Avg.:{:5.1f}% '.format(100 * metric[i, :i + 1].mean()))
-            # _logger.info()
             if i==(metric.shape[0]-1):
                 metrics.append(r1)
 
-    # for name , metrcic in zip(['TAw Acc', 'TAg Acc', 'TAw Forg', 'TAg Forg'],metrics):
     result = OrderedDict([('TAwa',metrics[0]),('TAga',metrics[1]),('TAwf',metrics[2]),('TAgf',metrics[3])])
     return acc_taw, acc_tag, forg_taw, forg_tag, logger.exp_path
     ####################################################################################################################
@@ -381,4 +373,3 @@ def main(argv=None):
 
 if __name__ == '__main__':
     main()
-
