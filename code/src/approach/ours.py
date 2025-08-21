@@ -135,10 +135,18 @@ class Appr(Inc_Learning_Appr):
             ce = ce.mean()
         return ce
 
-    def criterion(self, t, outputs, targets,outputs_old=None):
+    def criterion(self, outputs, targets, t, ppath=None):
         loss = 0
-        
-        if t > 0:
-            loss += self.lamb * self.cross_entropy(torch.cat(outputs[:t], dim=1),
-                                                   torch.cat(outputs_old[:t], dim=1), exp=0.5)
-        return loss + torch.nn.functional.cross_entropy(outputs[t], targets.long() - self.model.task_offset[t])
+        # chuẩn hóa nhãn local cho task hiện tại
+        task_target = targets.long() - self.model.task_offset[t]
+
+        # kiểm tra nhãn có vượt quá số class trong outputs không
+        if task_target.min() < 0 or task_target.max() >= outputs[t].size(1):
+            raise ValueError(
+                f"[Criterion Error] Task {t}: target out of range "
+                f"(min={task_target.min().item()}, max={task_target.max().item()}, "
+                f"allowed=[0,{outputs[t].size(1)-1}])"
+            )
+
+        return loss + torch.nn.functional.cross_entropy(outputs[t], task_target)
+
