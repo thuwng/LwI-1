@@ -15,8 +15,8 @@ import torch.nn.functional as F
 
 
 class Appr(Inc_Learning_Appr):
-    def __init__(self, model, device, args, logger,exemplars_dataset):
-        super(Appr, self).__init__(model, device, args,logger,exemplars_dataset)
+    def __init__(self, model, device, args, logger, exemplars_dataset):
+        super(Appr, self).__init__(model, device, args, logger, exemplars_dataset)
 
         self.lamb = 1
         self.alpha = 0.5
@@ -43,7 +43,6 @@ class Appr(Inc_Learning_Appr):
         parser = ArgumentParser()
         parser.add_argument('--lamb', default=1, type=float, required=False,
                             help='Forgetting-intransigence trade-off (default=%(default)s)')
-        # Define how old and new fisher is fused, by default it is a 50-50 fusion
         parser.add_argument('--alpha', default=0.5, type=float, required=False,
                             help='EWC alpha (default=%(default)s)')
         parser.add_argument('--fi-sampling-type', default='max_pred', type=str, required=False,
@@ -53,7 +52,7 @@ class Appr(Inc_Learning_Appr):
                             help='Number of samples for Fisher information (-1: all available) (default=%(default)s)')
         return parser.parse_known_args(args)
 
-    def _get_optimizer(self,model):
+    def _get_optimizer(self, model):
         """Returns the optimizer"""
         if len(model.heads) > 1:
             params = list(model.model.parameters()) + list(model.heads[-1].parameters())
@@ -61,26 +60,26 @@ class Appr(Inc_Learning_Appr):
             params = model.parameters()
         return torch.optim.SGD(params, lr=self.lr, weight_decay=self.wd, momentum=self.momentum)
 
-
-
-
-
     def train_loop(self, t, trn_loader, val_loader):
+        # Cập nhật tầng đầu ra của mô hình dựa trên số lớp của task hiện tại
+        num_classes = self.model.taskcla[t][1]
+        self.model.heads[-1] = nn.Linear(self.model.heads[-1].in_features, num_classes).to(self.device)
+        self.model2.heads[-1] = nn.Linear(self.model2.heads[-1].in_features, num_classes).to(self.device)
+        
+        # Gọi phương thức cha để tiếp tục huấn luyện
         super().train_loop(t, trn_loader, val_loader)
 
-    def get_activation(name,output_data):
-        def hook(model,input,output):
+    def get_activation(name, output_data):
+        def hook(model, input, output):
             output_data[name] = output.detach()
         return hook
 
-    def compute_fisher_matrix_diag(self, trn_loader,model):
+    def compute_fisher_matrix_diag(self, trn_loader, model):
         fisher = {n: (torch.zeros(p.shape).to(self.device)) for n, p in model.model.named_parameters()
                   if p.requires_grad}
         n_samples_batches = (self.num_samples // trn_loader.batch_size + 1) if self.num_samples > 0 \
             else (len(trn_loader.dataset) // trn_loader.batch_size)
         model.train()
-
-
 
         for images, targets in itertools.islice(trn_loader, n_samples_batches):
             outputs = model.forward(images.to(self.device))
@@ -108,17 +107,13 @@ class Appr(Inc_Learning_Appr):
         self.old_model.eval()
         self.old_model.freeze_all()
         
-        if t>0:
-
+        if t > 0:
             if self.config.training_mode == 'ot':
                 self.loss0 = self._federated_averaging_ot()
             elif self.config.training_mode == 'traditional':
                 self._federated_averaging_traditional()
             elif self.config.training_mode == 'ewc':
                 self._federated_averaging_ewc()
-
-
-        
 
     def cross_entropy(self, outputs, targets, exp=1.0, size_average=True, eps=1e-5):
         out = torch.nn.functional.softmax(outputs, dim=1)
@@ -137,22 +132,29 @@ class Appr(Inc_Learning_Appr):
 
     def criterion(self, t, outputs, targets, outputs_old=None):
         loss = 0
-        # đảm bảo luôn là tensor trên device
+        # Đảm bảo targets là tensor trên device
         if not isinstance(targets, torch.Tensor):
             targets = torch.tensor(targets, dtype=torch.long, device=self.device)
         else:
             targets = targets.long().to(self.device)
 
+        # Ánh xạ nhãn về phạm vi của task hiện tại
         task_target = targets - self.model.task_offset[t]
 
-        # kiểm tra nhãn có vượt quá số class trong outputs không
-        if task_target.min() < 0 or task_target.max() >= outputs[t].size(1):
+        # Kiểm tra phạm vi nhãn dựa trên số lớp đầu ra của task
+        num_classes = outputs[t].size(1)
+        if task_target.min() < 0 or task_target.max() >= num_classes:
             raise ValueError(
                 f"[Criterion Error] Task {t}: target out of range "
                 f"(min={task_target.min().item()}, max={task_target.max().item()}, "
-                f"allowed=[0,{outputs[t].size(1)-1}])"
+                f"allowed=[0,{num_classes-1}])"
             )
 
-        return loss + torch.nn.functional.cross_entropy(outputs[t], task_target)
+        # Tính loss cross_entropy
+        loss += torch.nn.functional.cross_entropy(outputs[t], task_target)
 
+        # Thêm regularization hoặc loss từ outputs_old nếu có
+        if outputs_old is not None:
+            loss += self.lamb * self.cross_entropy(outputs[t], outputs_old[t], exp=1.0)
 
+        return loss
