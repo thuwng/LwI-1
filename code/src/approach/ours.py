@@ -135,13 +135,15 @@ class Appr(Inc_Learning_Appr):
             ce = ce.mean()
         return ce
 
-    def criterion(self, outputs, targets, t, ppath=None):
+    def criterion(self, t, outputs, targets, outputs_old=None):
         loss = 0
+        # đảm bảo luôn là tensor trên device
         if not isinstance(targets, torch.Tensor):
-            targets = torch.tensor(targets)
-        targets = targets.long().to(self.device)
-        task_target = targets - self.model.task_offset[t]
+            targets = torch.tensor(targets, dtype=torch.long, device=self.device)
+        else:
+            targets = targets.long().to(self.device)
 
+        task_target = targets - self.model.task_offset[t]
 
         # kiểm tra nhãn có vượt quá số class trong outputs không
         if task_target.min() < 0 or task_target.max() >= outputs[t].size(1):
@@ -152,4 +154,5 @@ class Appr(Inc_Learning_Appr):
             )
 
         return loss + torch.nn.functional.cross_entropy(outputs[t], task_target)
+
 
