@@ -136,9 +136,12 @@ class Appr(Inc_Learning_Appr):
         return ce
 
     def criterion(self, t, outputs, targets,outputs_old=None):
+        print(f"Task {t}, task_offset: {self.model.task_offset[t]}, targets: {targets}")
         loss = 0
         
         if t > 0:
             loss += self.lamb * self.cross_entropy(torch.cat(outputs[:t], dim=1),
                                                    torch.cat(outputs_old[:t], dim=1), exp=0.5)
+        adjusted_targets = targets.long() - self.model.task_offset[t]
+        print(f"Adjusted targets: {adjusted_targets}")
         return loss + torch.nn.functional.cross_entropy(outputs[t], targets.long() - self.model.task_offset[t])
